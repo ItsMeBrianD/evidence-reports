@@ -1,0 +1,30 @@
+---
+kind: pipeline
+type: docker
+name: mle-broadcast
+
+steps:
+  - name: Build Evidence Project
+    image: node:18
+    commands:
+      - cd mle-broadcast
+      - npm i
+      - npm run build
+  
+  - name: Sync Build Artifacts
+    image: drillster/drone-rsync
+    settings:
+      hosts: ['static-site-rsync']
+      source: ./mle-broadcast/build
+      target: ./mle-broadcast
+      key:
+        from_secret: drone-ssh-key
+
+  - name: discord notification
+    image: appleboy/drone-discord
+    settings:
+      webhook_id:
+        from_secret: discord_webhook_id 
+      webhook_token:
+        from_secret: discord_webhook_token
+
