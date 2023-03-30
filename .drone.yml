@@ -4,12 +4,12 @@ type: docker
 name: mle-broadcast
 
 steps:
-  # - name: Build Evidence Project
-  #   image: node:18
-  #   commands:
-  #     - cd mle-broadcast
-  #     - npm i
-  #     - npm run build
+  - name: Build Evidence Project
+    image: node:18
+    commands:
+      - cd mle-broadcast
+      - npm i
+      - npm run build
 
   - name: Sync Build Artifacts
     image: drillster/drone-rsync
@@ -17,14 +17,14 @@ steps:
       hosts: ["static-site-rsync"]
       user: root
       port: 22
-      source: ./mle-broadcast
+      source: ./mle-broadcast/build/*
       target: /data/mle-broadcast
       recursive: true
       delete: true
       key:
         from_secret: drone-ssh-key
 
-  - name: discord notification
+  - name: Discord Notify
     image: appleboy/drone-discord
     settings:
       webhook_id:
