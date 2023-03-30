@@ -6,6 +6,18 @@ name: mle-broadcast
 steps:
   - name: Build Evidence Project
     image: node:18
+    environment:
+      DATABASE: postgres
+      POSTGRES_HOST:
+        from_secret: postgres-host
+      POSTGRES_USER: 
+        from_secret: postgres-user
+      POSTGRES_PASSWORD:
+        from_secret: postgres-password
+      POSTGRES_PORT:
+        from_secret: postgres-port
+      POSTGRES_SCHEMA:
+        from_secret: postgres-schema
     commands:
       - cd mle-broadcast
       - npm i
