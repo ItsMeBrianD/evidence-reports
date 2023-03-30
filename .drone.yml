@@ -22,7 +22,7 @@ steps:
       recursive: true
       delete: true
       key:
-        from_secret: drone-ssh-key-wrong
+        from_secret: drone-ssh-key
 
   - name: discord notification
     image: appleboy/drone-discord
