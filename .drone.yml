@@ -15,13 +15,14 @@ steps:
     image: drillster/drone-rsync
     settings:
       hosts: ['static-site-rsync']
+      user: root
       port: 22
       source: ./mle-broadcast/build
       target: /data/mle-broadcast
       recursive: true
       delete: true
       key:
-        from_secret: drone-ssh-key
+        from_secret: drone-ssh-key-wrong
 
   - name: discord notification
     image: appleboy/drone-discord
