@@ -16,7 +16,7 @@ steps:
     settings:
       hosts: ['static-site-rsync']
       source: ./mle-broadcast/build
-      target: ./mle-broadcast
+      target: /data/mle-broadcast
       key:
         from_secret: drone-ssh-key
 
