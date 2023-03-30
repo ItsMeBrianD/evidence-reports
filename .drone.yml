@@ -23,8 +23,6 @@ steps:
       delete: true
       key:
         from_secret: drone-ssh-key
-      prescript:
-        - ping static-site-rsync
 
   - name: discord notification
     image: appleboy/drone-discord
