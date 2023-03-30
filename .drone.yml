@@ -19,6 +19,7 @@ steps:
       port: 22
       source: ./mle-broadcast/build
       target: /data/mle-broadcast
+      include: ["*"]
       recursive: true
       delete: true
       key:
