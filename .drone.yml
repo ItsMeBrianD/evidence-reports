@@ -15,8 +15,11 @@ steps:
     image: drillster/drone-rsync
     settings:
       hosts: ['static-site-rsync']
+      port: 22
       source: ./mle-broadcast/build
       target: /data/mle-broadcast
+      recursive: true
+      delete: true
       key:
         from_secret: drone-ssh-key
 
