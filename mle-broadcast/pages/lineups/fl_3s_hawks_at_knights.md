@@ -3,7 +3,7 @@ title: Week 4 FL 3s Hawks @ Knights
 ---
 ```stat_ntiles
 WITH SKILL_GROUP AS (SELECT *
-                     FROM game_skill_group_profile
+                     FROM sprocket.game_skill_group_profile
                      WHERE code = 'FL'),
      AVERAGES AS (SELECT psl."playerId",
                          mp2.name,
@@ -16,13 +16,13 @@ WITH SKILL_GROUP AS (SELECT *
                          ROUND(avg((stats -> 'otherStats' -> 'stats' -> 'core' -> 'assists')::numeric),
                                2)                                                                        as avg_assists
                   FROM player_stat_line psl
-                           INNER JOIN round r on psl."roundId" = r.id
-                           INNER JOIN match m on r."matchId" = m.id
-                           INNER JOIN match_parent mp on m."matchParentId" = mp.id
-                           INNER JOIN schedule_fixture sf on mp."fixtureId" = sf.id
+                           INNER JOIN sprocket.round r on psl."roundId" = r.id
+                           INNER JOIN sprocket.match m on r."matchId" = m.id
+                           INNER JOIN sprocket.match_parent mp on m."matchParentId" = mp.id
+                           INNER JOIN sprocket.schedule_fixture sf on mp."fixtureId" = sf.id
                            INNER JOIN SKILL_GROUP gsgp on m."skillGroupId" = gsgp."skillGroupId"
-                           INNER JOIN player p on psl."playerId" = p.id
-                           INNER JOIN member_profile mp2 on p."memberId" = mp2."memberId"
+                           INNER JOIN sprocket.player p on psl."playerId" = p.id
+                           INNER JOIN sprocket.member_profile mp2 on p."memberId" = mp2."memberId"
                   GROUP BY psl."playerId", mp2.name)
 SELECT JSON_BUILD_ARRAY(
         json_build_object('stat', 'Sprocket Rating', 'avg', avg_gpi::text, 'ntile', ntile(100) OVER (order by avg_gpi)),
@@ -38,7 +38,7 @@ FROM AVERAGES
 ```
 ```misc_ntiles
 WITH SKILL_GROUP AS (SELECT *
-                     FROM game_skill_group_profile
+                     FROM sprocket.game_skill_group_profile
                      WHERE code = 'FL'),
      AVERAGES AS (SELECT psl."playerId",
                          mp2.name,
@@ -62,14 +62,14 @@ WITH SKILL_GROUP AS (SELECT *
                          ROUND(avg((stats -> 'otherStats' -> 'stats' -> 'positioning' -> 'percent_infront_ball')::numeric), 2) as avg_infront_ball,
                          ROUND(avg((stats -> 'otherStats' -> 'stats' -> 'positioning' -> 'percent_defensive_half')::numeric), 2) as avg_defensive_half,
                          ROUND(avg((stats -> 'otherStats' -> 'stats' -> 'positioning' -> 'percent_offensive_half')::numeric), 2) as avg_offensive_half
-                      FROM player_stat_line psl
-                           INNER JOIN round r on psl."roundId" = r.id
-                           INNER JOIN match m on r."matchId" = m.id
-                           INNER JOIN match_parent mp on m."matchParentId" = mp.id
-                           INNER JOIN schedule_fixture sf on mp."fixtureId" = sf.id
+                      FROM sprocket.player_stat_line psl
+                           INNER JOIN sprocket.round r on psl."roundId" = r.id
+                           INNER JOIN sprocket.match m on r."matchId" = m.id
+                           INNER JOIN sprocket.match_parent mp on m."matchParentId" = mp.id
+                           INNER JOIN sprocket.schedule_fixture sf on mp."fixtureId" = sf.id
                            INNER JOIN SKILL_GROUP gsgp on m."skillGroupId" = gsgp."skillGroupId"
-                           INNER JOIN player p on psl."playerId" = p.id
-                           INNER JOIN member_profile mp2 on p."memberId" = mp2."memberId"
+                           INNER JOIN sprocket.player p on psl."playerId" = p.id
+                           INNER JOIN sprocket.member_profile mp2 on p."memberId" = mp2."memberId"
                   GROUP BY psl."playerId", mp2.name)
 SELECT JSON_BUILD_ARRAY(
         json_build_object('stat', 'Avg. Demos', 'avg', avg_demos::text, 'ntile', ntile(100) over (order by avg_demos)),
@@ -102,12 +102,13 @@ SELECT names.column1 as player_name FROM (VALUES ('Achilles'), ('neas'), ('Villi
 WITH MLE_PLAYER AS (
     SELECT * FROM mledb.player WHERE name in (${hawks_players})
 ), SPROCKET_PLAYER AS (
-    SELECT player.*, name FROM player
-            INNER JOIN member_profile mp on player."memberId" = mp."memberId"
+    SELECT player.*, name FROM sprocket.player
+            INNER JOIN sprocket.member_profile mp on player."memberId" = mp."memberId"
              WHERE name in (${hawks_players})
 )
 SELECT m.name, m.team_name as team, m.mode_preference, s.salary, m.id as mleid, s.id as sprocketid FROM MLE_PLAYER m
-    INNER JOIN SPROCKET_PLAYER s ON m.name = s.name;
+    INNER JOIN SPROCKET_PLAYER s ON m.name = s.name
+    ORDER BY s.salary desc;
 ```
 ```hawks_ntiles
 SELECT *
@@ -127,12 +128,13 @@ SELECT names.column1 as player_name FROM (VALUES ('YenYen'), ('the1337157'), ('C
 WITH MLE_PLAYER AS (
     SELECT * FROM mledb.player WHERE name in (${knights_players})
 ), SPROCKET_PLAYER AS (
-    SELECT player.*, name FROM player
-            INNER JOIN member_profile mp on player."memberId" = mp."memberId"
+    SELECT player.*, name FROM sprocket.player
+            INNER JOIN sprocket.member_profile mp on player."memberId" = mp."memberId"
              WHERE name in (${knights_players})
 )
 SELECT m.name, m.team_name as team, m.mode_preference, s.salary, m.id as mleid, s.id as sprocketid FROM MLE_PLAYER m
-    INNER JOIN SPROCKET_PLAYER s ON m.name = s.name;
+    INNER JOIN SPROCKET_PLAYER s ON m.name = s.name
+    ORDER BY s.salary desc;
 ```
 ```knights_ntiles
 SELECT *
@@ -144,6 +146,14 @@ SELECT *
 FROM ${misc_ntiles} X
 WHERE name IN (${knights_players})
 ```
+
+
+<!-- 
+    Devloper Notes:
+
+        - Query chaining for heavy queries doesn't actually chain queries
+          - This means you run heavy queries multiple times
+-->
 
 # Hawks @ Knights
 ## FL Standard
