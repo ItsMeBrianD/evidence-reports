@@ -12,7 +12,7 @@ FROM schedule_group sg
          INNER JOIN schedule_group_type sgt on sg."typeId" = sgt.id
          INNER JOIN schedule_group season on sg."parentGroupId" = season.id
 WHERE sgt.code = 'WEEK'
-  AND season.id = {seasonId}
+  AND season.id = -1
 ORDER BY sg.start
 ```
 
@@ -22,8 +22,10 @@ SELECT away.title as "away", home.title as "home", sf.id as "fixture_id" FROM sc
     INNER JOIN schedule_group season on week."parentGroupId" = season.id
     INNER JOIN franchise_profile home on sf."homeFranchiseId" = home."franchiseId"
     INNER JOIN franchise_profile away on sf."awayFranchiseId" = away."franchiseId"
-WHERE season.id = {seasonId}
+WHERE season.id = -1
 ```
+
+# This page is a work in progress and does not function
 
 <Tabs>
     {#each week as week}

@@ -1,8 +1,36 @@
 ---
 title: Week 4 FL 3s Hawks @ Knights
 ---
-```skill_group
-SELECT * FROM sprocket.game_skill_group_profile WHERE code = 'FL'
+```away_players
+SELECT names.column1 as player_name FROM (VALUES ('Achilles'), ('neas'), ('Villian')) AS names
+```
+```home_players
+SELECT names.column1 as player_name FROM (VALUES ('YenYen'), ('the1337157'), ('Cardinal22')) AS names
+```
+```fixture
+WITH PAGE_VARIABLES AS (
+    SELECT 'Match 4' as week,
+           'Season 15' as season,
+           'FL' as league,
+           'Standard' as game_mode,
+           'Knights' as playing_team
+)
+SELECT away.title as "away", home.title as "home", week.description as match, season.description as season, gsgp.code as league, gm.description as game_mode, gsgp."skillGroupId" as leagueid
+FROM schedule_fixture
+         INNER JOIN franchise_profile away on schedule_fixture."awayFranchiseId" = away."franchiseId"
+         INNER JOIN franchise_profile home on schedule_fixture."homeFranchiseId" = home."franchiseId"
+         INNER JOIN schedule_group week on schedule_fixture."scheduleGroupId" = week.id
+         INNER JOIN schedule_group season on week."parentGroupId" = season.id
+         INNER JOIN match_parent mp on schedule_fixture.id = mp."fixtureId"
+         INNER JOIN match m on mp.id = m."matchParentId"
+         INNER JOIN game_skill_group_profile gsgp on m."skillGroupId" = gsgp."skillGroupId"
+         INNER JOIN game_mode gm on m."gameModeId" = gm.id
+        INNER JOIN PAGE_VARIABLES vars ON week.description = vars.week
+  and season.description = vars.season
+  and gsgp.code = vars.league
+  and gm.description = vars.game_mode
+  and vars.playing_team in (away.title, home.title)
+ORDER BY week.start, week.description
 ```
 
 ```win_ntiles
@@ -22,8 +50,7 @@ WITH WIN_RATES AS (
     INNER JOIN schedule_fixture sf on mp."fixtureId" = sf.id
     INNER JOIN schedule_group week on sf."scheduleGroupId" = week.id
     INNER JOIN schedule_group season on week."parentGroupId" = season.id
-WHERE season.description = 'Season 15'
-  AND gsgp.code = 'FL'
+    INNER JOIN (${fixture}) vars ON season.description = vars.season and gsgp.code = vars.league
 GROUP BY p.id, gsgp.id
 )
 SELECT *,
@@ -32,8 +59,7 @@ SELECT *,
 ```
 
 ```stat_ntiles
-WITH SKILL_GROUP AS (${skill_group}),
-     AVERAGES AS (SELECT psl."playerId",
+WITH AVERAGES AS (SELECT psl."playerId",
                          mp2.name,
                          ROUND(avg((stats -> 'gpi')::numeric), 2)                                        as avg_gpi,
                          ROUND(avg((stats -> 'dpi')::numeric), 2)                                        as avg_dpi,
@@ -48,9 +74,9 @@ WITH SKILL_GROUP AS (${skill_group}),
                            INNER JOIN sprocket.match m on r."matchId" = m.id
                            INNER JOIN sprocket.match_parent mp on m."matchParentId" = mp.id
                            INNER JOIN sprocket.schedule_fixture sf on mp."fixtureId" = sf.id
-                           INNER JOIN SKILL_GROUP gsgp on m."skillGroupId" = gsgp."skillGroupId"
                            INNER JOIN sprocket.player p on psl."playerId" = p.id
                            INNER JOIN sprocket.member_profile mp2 on p."memberId" = mp2."memberId"
+                           INNER JOIN (${fixture}) vars ON m."skillGroupId" = vars.leagueId
                   GROUP BY psl."playerId", mp2.name)
 SELECT JSON_BUILD_ARRAY(
         json_build_object('stat', 'Sprocket Rating', 'avg', avg_gpi::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_gpi)::numeric, 2) * 100),
@@ -65,8 +91,7 @@ SELECT JSON_BUILD_ARRAY(
 FROM AVERAGES
 ```
 ```misc_ntiles
-WITH SKILL_GROUP AS (${skill_group}),
-     AVERAGES AS (SELECT psl."playerId",
+WITH AVERAGES AS (SELECT psl."playerId",
                          mp2.name,
                          -- Demos
                          ROUND(avg((stats -> 'otherStats' -> 'stats' -> 'demo' -> 'inflicted')::numeric), 2) as avg_demos,
@@ -93,9 +118,9 @@ WITH SKILL_GROUP AS (${skill_group}),
                            INNER JOIN sprocket.match m on r."matchId" = m.id
                            INNER JOIN sprocket.match_parent mp on m."matchParentId" = mp.id
                            INNER JOIN sprocket.schedule_fixture sf on mp."fixtureId" = sf.id
-                           INNER JOIN SKILL_GROUP gsgp on m."skillGroupId" = gsgp."skillGroupId"
                            INNER JOIN sprocket.player p on psl."playerId" = p.id
                            INNER JOIN sprocket.member_profile mp2 on p."memberId" = mp2."memberId"
+                           INNER JOIN (${fixture}) vars ON m."skillGroupId" = vars.leagueId
                   GROUP BY psl."playerId", mp2.name)
 SELECT JSON_BUILD_ARRAY(
         json_build_object('stat', 'Avg. Demos', 'avg', avg_demos::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_demos)::numeric, 2) * 100),
@@ -120,17 +145,13 @@ SELECT JSON_BUILD_ARRAY(
 FROM AVERAGES
 ```
 
-
-```hawks_players
-SELECT names.column1 as player_name FROM (VALUES ('Achilles'), ('neas'), ('Villian')) AS names
-```
-```hawks_basic_info
+```away_basic_info
 WITH MLE_PLAYER AS (
-    SELECT * FROM mledb.player WHERE name in (${hawks_players})
+    SELECT * FROM mledb.player WHERE name in (${away_players})
 ), SPROCKET_PLAYER AS (
     SELECT player.*, name FROM sprocket.player
             INNER JOIN sprocket.member_profile mp on player."memberId" = mp."memberId"
-             WHERE name in (${hawks_players})
+             WHERE name in (${away_players})
 )
 SELECT m.name,
        m.team_name as team,
@@ -144,27 +165,24 @@ FROM MLE_PLAYER m
     INNER JOIN ${win_ntiles} wins ON s.id = wins.playerid
     ORDER BY s.salary desc;
 ```
-```hawks_ntiles
+```away_ntiles
 SELECT *
 FROM ${stat_ntiles} X
-WHERE name IN (${hawks_players})
+WHERE name IN (${away_players})
 ```
-```hawks_misc_ntiles
+```away_misc_ntiles
 SELECT *
 FROM ${misc_ntiles} X
-WHERE name IN (${hawks_players})
+WHERE name IN (${away_players})
 ```
 
-```knights_players
-SELECT names.column1 as player_name FROM (VALUES ('YenYen'), ('the1337157'), ('Cardinal22')) AS names
-```
-```knights_basic_info
+```home_basic_info
 WITH MLE_PLAYER AS (
-    SELECT * FROM mledb.player WHERE name in (${knights_players})
+    SELECT * FROM mledb.player WHERE name in (${home_players})
 ), SPROCKET_PLAYER AS (
     SELECT player.*, name FROM sprocket.player
             INNER JOIN sprocket.member_profile mp on player."memberId" = mp."memberId"
-             WHERE name in (${knights_players})
+             WHERE name in (${home_players})
 )
 SELECT m.name,
        m.team_name as team,
@@ -179,15 +197,15 @@ FROM MLE_PLAYER m
     ORDER BY s.salary desc;
 
 ```
-```knights_ntiles
+```home_ntiles
 SELECT *
 FROM ${stat_ntiles} X
-WHERE name IN (${knights_players})
+WHERE name IN (${home_players})
 ```
-```knights_misc_ntiles
+```home_misc_ntiles
 SELECT *
 FROM ${misc_ntiles} X
-WHERE name IN (${knights_players})
+WHERE name IN (${home_players})
 ```
 
 
@@ -198,10 +216,10 @@ WHERE name IN (${knights_players})
           - This means you run heavy queries multiple times
 -->
 
-# Hawks @ Knights
-## FL Standard
+# {fixture[0].away} @ {fixture[0].home}
+## {fixture[0].league} {fixture[0].game_mode}
 
-### Hawks Roster:
+### {fixture[0].away} Roster:
 <table>
     <tr>
         <th> Player </th>
@@ -211,7 +229,7 @@ WHERE name IN (${knights_players})
         <th> Standing </th>
         <th> Win Rate </th>
     </tr>
-{#each hawks_basic_info as player}
+{#each away_basic_info as player}
     <tr>
         <td> {player.name} </td>
         <td> {player.salary} </td>
@@ -223,7 +241,7 @@ WHERE name IN (${knights_players})
 {/each}
 </table>
 
-### Knights Roster
+### {fixture[0].home} Roster
 
 <table>
     <tr>
@@ -234,7 +252,7 @@ WHERE name IN (${knights_players})
         <th> Standing </th>
         <th> Win Rate </th>
     </tr>
-{#each knights_basic_info as player}
+{#each home_basic_info as player}
     <tr>
         <td> {player.name} </td>
         <td> {player.salary} </td>
@@ -248,9 +266,9 @@ WHERE name IN (${knights_players})
 
 ## Core Stat percentiles
 
-### Hawks
-{#each hawks_ntiles as player_ntiles}
-    <h4>{player_ntiles.name} (Salary {hawks_basic_info.find(p => p.name === player_ntiles.name).salary})</h4>
+### {fixture[0].away}
+{#each away_ntiles as player_ntiles}
+    <h4>{player_ntiles.name} (Salary {away_basic_info.find(p => p.name === player_ntiles.name).salary})</h4>
     <table>
         <tr>
             <th class="text-left w-full"> Stat </th>
@@ -272,9 +290,9 @@ WHERE name IN (${knights_players})
     </table>
 {/each}
 
-### Knights
-{#each knights_ntiles as player_ntiles}
-    <h4>{player_ntiles.name} (Salary {knights_basic_info.find(p => p.name === player_ntiles.name).salary})</h4>
+### {fixture[0].home}
+{#each home_ntiles as player_ntiles}
+    <h4>{player_ntiles.name} (Salary {home_basic_info.find(p => p.name === player_ntiles.name).salary})</h4>
     <table>
         <tr>
             <th class="text-left"> Stat </th>
@@ -297,9 +315,9 @@ WHERE name IN (${knights_players})
 {/each}
 
 ## Misc Stat Percentiles
-### Hawks
-{#each hawks_misc_ntiles as player_ntiles}
-    <h4>{player_ntiles.name} (Salary {hawks_basic_info.find(p => p.name === player_ntiles.name).salary})</h4>
+### {fixture[0].away}
+{#each away_misc_ntiles as player_ntiles}
+    <h4>{player_ntiles.name} (Salary {away_basic_info.find(p => p.name === player_ntiles.name).salary})</h4>
     <table>
         <tr>
             <th class="text-left"> Stat </th>
@@ -316,9 +334,9 @@ WHERE name IN (${knights_players})
     </table>
 {/each}
 
-### Knights
-{#each knights_misc_ntiles as player_ntiles}
-    <h4>{player_ntiles.name} (Salary {knights_basic_info.find(p => p.name === player_ntiles.name).salary})</h4>
+### {fixture[0].home}
+{#each home_misc_ntiles as player_ntiles}
+    <h4>{player_ntiles.name} (Salary {home_basic_info.find(p => p.name === player_ntiles.name).salary})</h4>
     <table>
         <tr>
             <th class="text-left"> Stat </th>
