@@ -32,7 +32,7 @@ steps:
       hosts: ["static-site-rsync"]
       user: root
       port: 22
-      source: /drone/src/mle-broadcast/build
+      source: /drone/src/mle-broadcast/build/*
       target: /data/mle-broadcast
       recursive: true
       delete: true
