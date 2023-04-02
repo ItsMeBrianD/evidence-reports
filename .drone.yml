@@ -20,7 +20,7 @@ steps:
         from_secret: postgres-schema
     commands:
       - cd mle-broadcast
-      - npm i
+      - npm ci
       - npm run build
 
   - name: Sync Build Artifacts
