@@ -1,10 +1,38 @@
 ---
 title: Week 4 FL 3s Hawks @ Knights
 ---
+```skill_group
+SELECT * FROM sprocket.game_skill_group_profile WHERE code = 'FL'
+```
+
+```win_ntiles
+WITH WIN_RATES AS (
+    SELECT p.id as playerId,
+       COUNT(*) FILTER (WHERE r."homeWon" = psl."isHome") as won,
+       COUNT(*) FILTER (WHERE r."homeWon" != psl."isHome") as lost,
+       COUNT(*) as played,
+       COUNT(*) FILTER (WHERE r."homeWon" = psl."isHome") / COUNT(*)::numeric as rate
+
+       FROM sprocket.player p
+    INNER JOIN game_skill_group_profile gsgp on p."skillGroupId" = gsgp."skillGroupId"
+    INNER JOIN player_stat_line psl on p.id = psl."playerId"
+    INNER JOIN round r on psl."roundId" = r.id
+    INNER JOIN match m on r."matchId" = m.id
+    INNER JOIN match_parent mp on m."matchParentId" = mp.id
+    INNER JOIN schedule_fixture sf on mp."fixtureId" = sf.id
+    INNER JOIN schedule_group week on sf."scheduleGroupId" = week.id
+    INNER JOIN schedule_group season on week."parentGroupId" = season.id
+WHERE season.description = 'Season 15'
+  AND gsgp.code = 'FL'
+GROUP BY p.id, gsgp.id
+)
+SELECT *,
+       ROUND(PERCENT_RANK() over (order by rate)::numeric, 2) * 100 as ntile
+       from WIN_RATES
+```
+
 ```stat_ntiles
-WITH SKILL_GROUP AS (SELECT *
-                     FROM sprocket.game_skill_group_profile
-                     WHERE code = 'FL'),
+WITH SKILL_GROUP AS (${skill_group}),
      AVERAGES AS (SELECT psl."playerId",
                          mp2.name,
                          ROUND(avg((stats -> 'gpi')::numeric), 2)                                        as avg_gpi,
@@ -25,21 +53,19 @@ WITH SKILL_GROUP AS (SELECT *
                            INNER JOIN sprocket.member_profile mp2 on p."memberId" = mp2."memberId"
                   GROUP BY psl."playerId", mp2.name)
 SELECT JSON_BUILD_ARRAY(
-        json_build_object('stat', 'Sprocket Rating', 'avg', avg_gpi::text, 'ntile', ntile(100) OVER (order by avg_gpi)),
-        json_build_object('stat', 'Defense Rating', 'avg', avg_dpi::text, 'ntile', ntile(100) OVER (order by avg_dpi)),
-        json_build_object('stat', 'Offense Rating', 'avg', avg_opi::text, 'ntile', ntile(100) OVER (order by avg_opi)),
-        json_build_object('stat', 'Goals', 'avg', avg_goals::text, 'ntile', ntile(100) OVER (order by avg_goals)),
-        json_build_object('stat', 'Saves', 'avg', avg_saves::text, 'ntile', ntile(100) OVER (order by avg_saves)),
-        json_build_object('stat', 'Shots', 'avg', avg_shots::text, 'ntile', ntile(100) OVER (order by avg_shots)),
-        json_build_object('stat', 'Assists', 'avg', avg_assists::text, 'ntile', ntile(100) OVER (order by avg_assists))
+        json_build_object('stat', 'Sprocket Rating', 'avg', avg_gpi::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_gpi)::numeric, 2) * 100),
+        json_build_object('stat', 'Defense Rating', 'avg', avg_dpi::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_dpi)::numeric, 2) * 100),
+        json_build_object('stat', 'Offense Rating', 'avg', avg_opi::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_opi)::numeric, 2) * 100),
+        json_build_object('stat', 'Goals', 'avg', avg_goals::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_goals)::numeric, 2) * 100),
+        json_build_object('stat', 'Saves', 'avg', avg_saves::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_saves)::numeric, 2) * 100),
+        json_build_object('stat', 'Shots', 'avg', avg_shots::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_shots)::numeric, 2) * 100),
+        json_build_object('stat', 'Assists', 'avg', avg_assists::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_assists)::numeric, 2) * 100)
     ) as stats,
 "playerId", name
 FROM AVERAGES
 ```
 ```misc_ntiles
-WITH SKILL_GROUP AS (SELECT *
-                     FROM sprocket.game_skill_group_profile
-                     WHERE code = 'FL'),
+WITH SKILL_GROUP AS (${skill_group}),
      AVERAGES AS (SELECT psl."playerId",
                          mp2.name,
                          -- Demos
@@ -72,22 +98,22 @@ WITH SKILL_GROUP AS (SELECT *
                            INNER JOIN sprocket.member_profile mp2 on p."memberId" = mp2."memberId"
                   GROUP BY psl."playerId", mp2.name)
 SELECT JSON_BUILD_ARRAY(
-        json_build_object('stat', 'Avg. Demos', 'avg', avg_demos::text, 'ntile', ntile(100) over (order by avg_demos)),
-        json_build_object('stat', 'Avg. Times Demoed', 'avg', avg_demoed::text, 'ntile', ntile(100) over (order by avg_demoed)),
-        json_build_object('stat', 'Avg. BPM', 'avg', avg_bpm::text, 'ntile', ntile(100) over (order by avg_bpm)),
-        json_build_object('stat', 'Avg. Boost Stolen', 'avg', avg_boost_stolen::text, 'ntile', ntile(100) over (order by avg_boost_stolen)),
-        json_build_object('stat', 'Avg. Time w/o boost', 'avg', avg_no_boost::text, 'ntile', ntile(100) over (order by avg_no_boost)),
-        json_build_object('stat', 'Avg. Small Pads', 'avg', avg_small_boosts::text, 'ntile', ntile(100) over (order by avg_small_boosts)),
-        json_build_object('stat', 'Avg. Speed', 'avg', avg_speed::text, 'ntile', ntile(100) over (order by avg_speed)),
-        json_build_object('stat', 'Avg. % of time on ground', 'avg', avg_ground_percent::text, 'ntile', ntile(100) over (order by avg_ground_percent)),
-        json_build_object('stat', 'Avg. Powerslides', 'avg', avg_powerslides::text, 'ntile', ntile(100) over (order by avg_powerslides)),
-        json_build_object('stat', 'Avg. % of time Supersonic', 'avg', avg_supersonic::text, 'ntile', ntile(100) over (order by avg_supersonic)),
-        json_build_object('stat', 'Avg. Times scored on as last man', 'avg', avg_last_man_scored_on::text, 'ntile', ntile(100) over (order by avg_last_man_scored_on)),
-        json_build_object('stat', 'Avg. % of time last man', 'avg', avg_last_man::text, 'ntile', ntile(100) over (order by avg_last_man)),
-        json_build_object('stat', 'Avg. % of time first man', 'avg', avg_first_man::text, 'ntile', ntile(100) over (order by avg_first_man)),
-        json_build_object('stat', 'Avg. % of time in front of ball', 'avg', avg_infront_ball::text, 'ntile', ntile(100) over (order by avg_infront_ball)),
-        json_build_object('stat', 'Avg. % of time behind ball', 'avg', avg_defensive_half::text, 'ntile', ntile(100) over (order by avg_defensive_half)),
-        json_build_object('stat', 'Avg. % of time in offensive half', 'avg', avg_offensive_half::text, 'ntile', ntile(100) over (order by avg_offensive_half))
+        json_build_object('stat', 'Avg. Demos', 'avg', avg_demos::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_demos)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. Times Demoed', 'avg', avg_demoed::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_demoed)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. BPM', 'avg', avg_bpm::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_bpm)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. Boost Stolen', 'avg', avg_boost_stolen::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_boost_stolen)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. Time w/o boost', 'avg', avg_no_boost::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_no_boost)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. Small Pads', 'avg', avg_small_boosts::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_small_boosts)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. Speed', 'avg', avg_speed::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_speed)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. % of time on ground', 'avg', avg_ground_percent::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_ground_percent)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. Powerslides', 'avg', avg_powerslides::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_powerslides)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. % of time Supersonic', 'avg', avg_supersonic::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_supersonic)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. Times scored on as last man', 'avg', avg_last_man_scored_on::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_last_man_scored_on)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. % of time last man', 'avg', avg_last_man::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_last_man)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. % of time first man', 'avg', avg_first_man::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_first_man)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. % of time in front of ball', 'avg', avg_infront_ball::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_infront_ball)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. % of time behind ball', 'avg', avg_defensive_half::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_defensive_half)::numeric, 2) * 100),
+        json_build_object('stat', 'Avg. % of time in offensive half', 'avg', avg_offensive_half::text, 'ntile', ROUND(PERCENT_RANK() OVER (ORDER BY avg_offensive_half)::numeric, 2) * 100)
     ) as stats,
     "playerId",
     name
@@ -106,8 +132,16 @@ WITH MLE_PLAYER AS (
             INNER JOIN sprocket.member_profile mp on player."memberId" = mp."memberId"
              WHERE name in (${hawks_players})
 )
-SELECT m.name, m.team_name as team, m.mode_preference, s.salary, m.id as mleid, s.id as sprocketid FROM MLE_PLAYER m
+SELECT m.name,
+       m.team_name as team,
+       m.mode_preference,
+       s.salary,
+       m.id as mleid,
+       s.id as sprocketid,
+       wins.*
+FROM MLE_PLAYER m
     INNER JOIN SPROCKET_PLAYER s ON m.name = s.name
+    INNER JOIN ${win_ntiles} wins ON s.id = wins.playerid
     ORDER BY s.salary desc;
 ```
 ```hawks_ntiles
@@ -132,9 +166,18 @@ WITH MLE_PLAYER AS (
             INNER JOIN sprocket.member_profile mp on player."memberId" = mp."memberId"
              WHERE name in (${knights_players})
 )
-SELECT m.name, m.team_name as team, m.mode_preference, s.salary, m.id as mleid, s.id as sprocketid FROM MLE_PLAYER m
+SELECT m.name,
+       m.team_name as team,
+       m.mode_preference,
+       s.salary,
+       m.id as mleid,
+       s.id as sprocketid,
+       wins.*
+FROM MLE_PLAYER m
     INNER JOIN SPROCKET_PLAYER s ON m.name = s.name
+    INNER JOIN ${win_ntiles} wins ON s.id = wins.playerid
     ORDER BY s.salary desc;
+
 ```
 ```knights_ntiles
 SELECT *
@@ -165,6 +208,8 @@ WHERE name IN (${knights_players})
         <th> Salary </th>
         <th> Team </th>
         <th> Preferred Mode </th>
+        <th> Standing </th>
+        <th> Win Rate </th>
     </tr>
 {#each hawks_basic_info as player}
     <tr>
@@ -172,6 +217,8 @@ WHERE name IN (${knights_players})
         <td> {player.salary} </td>
         <td> {player.team} </td>
         <td> {player.mode_preference} </td>
+        <td> {player.won} - {player.lost} </td>
+        <td> {(player.rate * 100).toFixed(1)}% </td>
     </tr>
 {/each}
 </table>
@@ -184,6 +231,8 @@ WHERE name IN (${knights_players})
         <th> Salary </th>
         <th> Team </th>
         <th> Preferred Mode </th>
+        <th> Standing </th>
+        <th> Win Rate </th>
     </tr>
 {#each knights_basic_info as player}
     <tr>
@@ -191,6 +240,8 @@ WHERE name IN (${knights_players})
         <td> {player.salary} </td>
         <td> {player.team} </td>
         <td> {player.mode_preference} </td>
+        <td> {player.won} - {player.lost} </td>
+        <td> {(player.rate * 100).toFixed(1)}% </td>
     </tr>
 {/each}
 </table>
