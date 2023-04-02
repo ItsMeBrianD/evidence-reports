@@ -18,6 +18,8 @@ steps:
         from_secret: postgres-port
       POSTGRES_SCHEMA:
         from_secret: postgres-schema
+      POSTGRES_DATABASE:
+        from_secret: postgres-database
     commands:
       - cd mle-broadcast
       - npm ci
