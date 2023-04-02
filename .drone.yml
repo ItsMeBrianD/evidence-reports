@@ -24,7 +24,7 @@ steps:
       - cd mle-broadcast
       - npm ci
       - npm run build
-      - chmod 755 -R ./mle-broadcast/build
+      - chmod 755 -R /drone/src/mle-broadcast/build
 
   - name: Sync Build Artifacts
     image: drillster/drone-rsync
