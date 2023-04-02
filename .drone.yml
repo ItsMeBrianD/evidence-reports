@@ -35,6 +35,9 @@ steps:
       delete: true
       key:
         from_secret: drone-ssh-key
+      prescript:
+        - ls ./mle-broadcast
+        - ls ./mle-broadcast/build
 
   - name: Discord Notify
     image: appleboy/drone-discord
